@@ -162,12 +162,134 @@ class Compiler:
 			self.tokenizer.expect_end()
 
 	def expression(self):
-		self.bitwise_or_expression()
+		self.additive_expression()
 		if self.tokenizer.accept('='):
 			pass
 		pass
 
+	def assignment_expression(self):
+		if self.logical_or_expression():
+			return True
+		self.unary_expression()
+		self.assignment_operator()
+		self.assignment_epxression()
+
+	def logical_or_expression(self):
+		if self.logical_and_expression():
+			return True
+		self.logical_or_expression()
+		self.tokenizer.expect('or')
+		self.logical_and_expression()
+
+	def logical_and_expression(self):
+		if self.inclusive_or_expression():
+			return True
+		self.logical_and_expression()
+		self.tokenizer.expect('and')
+		self.bitwise_or_expression()
+
 	def bitwise_or_expression(self):
+		if self.bitwise_xor_expression(self):
+			return True
+		self.bitwise_or_expression()
+		self.tokenizer.expect('|')
+		self.bitwise_xor_expression()
+
+	def bitwise_xor_expression(self):
+		if self.bitwise_and_expression():
+			return True
+		self.bitwise_xor_expression()
+		self.tokenizer.expect('^')
+		self.bitwise_and_expression()
+	
+	def bitwise_and_expression(self):
+		if self.equality_expression():
+			return True
+		self.bitwise_and_expression()
+		self.tokenizer.expect('&')
+		self.equality_expression()
+
+	def equality_expression(self):
+		if self.relational_expression():
+			return True
+		self.equality_expression()
+		if self.tokenizer.accept('=='):
+			pass
+		elif self.tokenizer.accept('!='):
+			pass
+		else:
+			self.fail('Problem in equality_expression()')
+		
+		self.relational_expression()
+		return True
+
+	def relational_expression(self):
+		pass
+	
+	def shift_expression(self):
+		pass
+
+	def binary1(self):
+		self.code.append('push eax')
+		self.stack_position += self.word_size
+
+	def binary2_pop(self):
+		self.code.append('pop ebx')
+		self.stack_position -= self.word_size
+
+	def additive_expression(self):
+		self.multiplicative_expression()
+		while True:
+			if self.tokenizer.accept('+'):
+				self.binary1()
+				self.multiplicative_expression()
+				self.binary2_pop()
+				self.code.append('add eax,ebx')
+			elif self.tokenizer.accept('-'):
+				self.binary1()
+				self.multiplicative_expression()
+				self.binary2_pop()
+				self.code.append('sub ebx,eax')
+				self.code.append('mov eax,ebx')
+			else:
+				return
+	
+	def multiplicative_expression(self):
+		self.unary_expression()
+		while True:
+			if self.tokenizer.accept('*'):
+				self.binary1()
+				self.unary_expression()
+				self.binary2_pop()
+				self.code.append('imul eax,ebx')
+			elif self.tokenizer.accept('/'):
+				self.binary1()
+				self.unary_expression()
+				self.code.extend([
+					'mov ebx,eax',
+					'pop eax',
+					'xor edx,edx',
+					'idiv ebx',
+				])
+				self.stack_position -= self.word_size
+			elif self.tokenizer.accept('%'):
+				self.binary1()
+				self.unary_expression()
+				self.code.extend([
+					'mov ebx,eax',
+					'pop eax',
+					'xor edx,edx',
+					'idiv ebx',
+					'mov eax,edx',
+				])
+				self.stack_position -= self.word_size
+			else:
+				return
+
+	def unary_expression(self):
+		self.postfix_expression()
+
+	def postfix_expression(self):
 		self.primary_expression()
 
 	def primary_expression(self):
@@ -187,14 +309,14 @@ class Compiler:
 			if not self.tokenizer.peek(')'):
 				self.fail('No closing parenthesis')
 
-		else:
-			self.fail('Could not find a valid primary expression, token: ' + self.tokenizer.token_string())
-
 		# TODO: char literal?
 		# TODO: string literal
 
+		else:
+			self.fail('Could not find a valid primary expression, token: ' + self.tokenizer.token_string())
+
 		self.tokenizer.get_token()
-		return
+		return True
 
 	def int_literal(self):
 		negative = False

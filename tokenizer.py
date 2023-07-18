@@ -81,6 +81,10 @@ class Tokenizer:
 				while self.nextc in ['<', '=', '>', '|', '&', '!']:
 					self.take_char()
 
+			if len(self.token) == 0:
+				if self.nextc in ['+', '-', '/', '%', '*']:
+					self.take_char()
+
 			# Braces (not used?)
 			if len(self.token) == 0:
 				if self.nextc in ['(', ')', ':']:
