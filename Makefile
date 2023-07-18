@@ -28,6 +28,12 @@ modulus: FORCE
 	chmod +x samples/modulus
 	samples/modulus
 
+not: FORCE
+	python w.py samples/not.w
+	fasm samples/not.asm
+	chmod +x samples/not
+	samples/not
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

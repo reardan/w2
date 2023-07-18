@@ -6,5 +6,6 @@ samples/*.asm
 samples/add
 samples/modulus
 samples/multiply
+samples/not
 samples/simple
 samples/sub

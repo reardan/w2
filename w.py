@@ -94,7 +94,7 @@ class Compiler:
 
 	def fail(self, message):
 		print('Compilation failed for file ' + self.tokenizer.filename + ':' +
-			self.tokenizer.line_number + ':' + self.tokenizer.column_number)
+			str(self.tokenizer.line_number) + ':' + str(self.tokenizer.column_number))
 		print(message)
 		sys.exit(1)
 
@@ -287,6 +287,18 @@ class Compiler:
 				return
 
 	def unary_expression(self):
+		if self.tokenizer.accept('&'):
+			pass
+		if self.tokenizer.accept('*'):
+			pass
+		if self.tokenizer.accept('!'):
+			# this seems wrong
+			# should it be expression?
+			# c uses cast-expression
+			# gut says expression
+			self.multiplicative_expression()
+			self.code.append('not eax')
+			return
 		self.postfix_expression()
 
 	def postfix_expression(self):
@@ -349,7 +361,7 @@ class Compiler:
 		token = self.tokenizer.token_string()
 		# Should this be stored like this?
 		self.current_identifier = self.symbol_table.lookup(token)
-		return True
+		return self.current_identifier
 
 	def output_asm(self):
 		output_filename = ''.join(self.root_filename.split('.')[:-1]) + '.asm'
