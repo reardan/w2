@@ -34,6 +34,12 @@ not: FORCE
 	chmod +x samples/not
 	samples/not
 
+var: FORCE
+	python w.py samples/var.w
+	fasm samples/var.asm
+	chmod +x samples/var
+	samples/var
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

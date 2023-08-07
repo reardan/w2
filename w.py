@@ -161,6 +161,18 @@ class Compiler:
 			self.expression()
 			self.tokenizer.expect_end()
 
+	def variable_declaration(self):
+		symbol = self.symbol_table.lookup(self.tokenizer.token_string())
+		if symbol and symbol.symbol_type == 'Type':
+			self.tokenizer.get_token()
+			name = self.tokenizer.token_string()
+			identifier = self.symbol_table.lookup(name)
+			if identifier:
+				# TODO: add more descriptive error message
+				# including where the variable is previously declared
+				self.fail('variable "' + name + '" was previously declared')
+			identifier = self.symbol_table.declare(Variable(name))
+
 	def expression(self):
 		self.additive_expression()
 		if self.tokenizer.accept('='):
