@@ -46,6 +46,12 @@ call: FORCE
 	chmod +x samples/call
 	samples/call
 
+call2: FORCE
+	python w.py samples/call2.w
+	fasm samples/call2.asm
+	chmod +x samples/call2
+	samples/call2
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

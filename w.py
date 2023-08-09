@@ -127,19 +127,23 @@ class Compiler:
 
 	def function(self):
 		type_symbol = self.expect_type_name()
-		identifier = self.tokenizer.token_string()
+		name = self.tokenizer.token_string()
 		self.tokenizer.get_token()
 		if self.tokenizer.accept('('):
-			function = Function(identifier, type_symbol, self.code_position)
-			self.code.append(identifier + ':')
+			function = Function(name, type_symbol, self.code_position)
+			self.current_function = function
+			self.code.append(name + ':')
 			self.symbol_table.declare(function)
 			scope_level = len(self.symbol_table.table)
 			function.scope = self.symbol_table.add_scope('Function')
 			# Process arguments
+			variable_stack_position = 0
 			while not self.tokenizer.accept(')'):
 				arg_type = self.expect_type_name()
 				arg_identifier = self.tokenizer.token_string()
 				variable = Variable(arg_identifier, arg_type, 'Argument')
+				variable.stack_position = variable_stack_position
+				variable_stack_position += self.word_size
 				self.symbol_table.declare(variable)
 				self.tokenizer.get_token()
 				self.tokenizer.accept(',')
@@ -179,8 +183,8 @@ class Compiler:
 			self.stack_position = 0
 
 	def variable_declaration(self):
-		symbol = self.symbol_table.lookup(self.tokenizer.token_string())
-		if not symbol or symbol.symbol_type != 'Type':
+		symbol_type = self.symbol_table.lookup(self.tokenizer.token_string())
+		if not symbol_type or symbol_type.symbol_type != 'Type':
 			return False
 		self.tokenizer.get_token()
 		name = self.tokenizer.token_string()
@@ -189,7 +193,7 @@ class Compiler:
 			# TODO: add more descriptive error message
 			# including where the variable is previously declared
 			self.fail('variable "' + name + '" was previously declared')
-		variable = Variable(name, 'local', '')
+		variable = Variable(name, symbol_type, 'Local')
 		identifier = self.symbol_table.declare(variable)
 		self.tokenizer.get_token()
 
@@ -348,6 +352,7 @@ class Compiler:
 	def postfix_expression(self):
 		self.primary_expression()
 		if self.tokenizer.accept('('):
+			identifier = self.current_identifier
 			# TODO: make sure last_identifier is callable
 			stack_position = self.stack_position
 			if not self.tokenizer.accept(')'):
@@ -358,30 +363,36 @@ class Compiler:
 					self.expression()
 					self.binary1()
 				self.tokenizer.expect(')')
-		# mov_eax_esp_plus((stack_pos - s - 1) << word_size_log2)
-		# call_eax()
-		# fix_stack:
-		# be_pop(stack_pos - s)
-		# stack_pos = s
+			self.code.append('call ' + identifier.name)
+			# mov_eax_esp_plus((stack_pos - s - 1) << word_size_log2)
+			# call_eax()
+			# fix_stack:
+			# be_pop(stack_pos - s)
+			# stack_pos = s
 
-
+	def code_for_identifier(self, identifier):
+		if identifier.symbol_type == 'Function':
+			# self.code.append('mov eax,' + identifier.name)
+			pass
+		elif identifier.symbol_type == 'Variable':
+			stack_position = self.stack_position - identifier.stack_position
+			# For arguments we need to account for the return address
+			# that is pushed onto the stack in the 'call' instruction
+			if identifier.sub_type == 'Argument':
+				stack_position += self.word_size
+			if identifier.sub_type == 'Local' or identifier.sub_type == 'Argument':
+				self.code.append('mov eax,[esp+' + str(stack_position) + ']')
+			# mov eax,[0x402000]  # global variable
+		else:
+			self.fail('Unprocesed symbol_type: ' + identifier.symbol_type)
 
 	def primary_expression(self):
 		if self.int_literal():
 			pass
 
 		elif self.identifier():
-			identifier = self.current_identifier
-			if identifier.symbol_type == 'Function':
-				self.code.append('call ' + identifier.name)
-			elif identifier.symbol_type == 'Variable':
-				if identifier.variable_type == 'local':
-					self.code.append('mov eax,[esp+' + str(self.stack_position-identifier.stack_position) + ']')
-				# mov eax,[0x402000]  # global variable
-			else:
-				self.fail('Unprocesed symbol_type: ' + identifier.symbol_type)
+			self.code_for_identifier(self.current_identifier)
 			self.tokenizer.get_token()
-			self.current_identifier = None
 			return
 		
 		elif self.tokenizer.accept('('):
