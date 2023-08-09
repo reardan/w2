@@ -11,10 +11,12 @@ class Tokenizer:
 		self.line = []
 		self.tab_level = 0
 		self.token_newline = False
+		self.end_of_file = False
 
 	def get_char(self):
 		# End of stream
 		if self.source_index >= len(self.source):
+			self.end_of_file = True
 			return ''
 		# Get next char from 
 		char = self.source[self.source_index]

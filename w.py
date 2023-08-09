@@ -122,6 +122,10 @@ class Compiler:
 		# Handle imports
 		# Handle variable declarations
 		# Handle function declarations
+		while not self.tokenizer.end_of_file:
+			self.function()
+
+	def function(self):
 		type_symbol = self.expect_type_name()
 		identifier = self.tokenizer.token_string()
 		self.tokenizer.get_token()
@@ -346,7 +350,6 @@ class Compiler:
 		if self.tokenizer.accept('('):
 			# TODO: make sure last_identifier is callable
 			stack_position = self.stack_position
-			self.binary1()
 			if not self.tokenizer.accept(')'):
 				# this would be nice to have in a repeat..until
 				self.expression()
@@ -369,10 +372,14 @@ class Compiler:
 
 		elif self.identifier():
 			identifier = self.current_identifier
-			if identifier.variable_type == 'local':
-				self.code.append('mov eax,[esp+' + str(self.stack_position-identifier.stack_position) + ']')
-			# mov eax,[0x402000]  # global variable
-			print('identifier', self.identifier)
+			if identifier.symbol_type == 'Function':
+				self.code.append('call ' + identifier.name)
+			elif identifier.symbol_type == 'Variable':
+				if identifier.variable_type == 'local':
+					self.code.append('mov eax,[esp+' + str(self.stack_position-identifier.stack_position) + ']')
+				# mov eax,[0x402000]  # global variable
+			else:
+				self.fail('Unprocesed symbol_type: ' + identifier.symbol_type)
 			self.tokenizer.get_token()
 			self.current_identifier = None
 			return
