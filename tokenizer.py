@@ -7,6 +7,7 @@ class Tokenizer:
 		self.token = []
 		self.line_number = 1
 		self.column_number = 1
+		self.last_line = []
 		self.line = []
 		self.tab_level = 0
 		self.token_newline = False
@@ -24,9 +25,10 @@ class Tokenizer:
 		c = self.get_char()
 
 		# Handle newline
-		if self.nextc == '\n':
+		if c == '\n':
 			self.tab_level = 0
 			self.line_number += 1
+			self.last_line = self.line
 			self.line = []
 		# Append to line
 		else:
@@ -138,7 +140,10 @@ class Tokenizer:
 
 	def expect_or_newline(self, string):
 		if not self.accept(string) and not self.token_newline:
-			raise Exception('"' + string + '" or newline expected, found "' + ''.join(self.token) + '"')
+			raise Exception('"' + string +
+		   '" or newline expected, found "' + ''.join(self.token) + '"' +
+		   'on line ' + str(self.line_number)
+			 )
 
 	def expect_end(self):
 		self.expect_or_newline(';')

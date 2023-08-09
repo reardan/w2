@@ -85,6 +85,13 @@ class Compiler:
 		self.tokenizer.read()
 		self.tokenizer.nextc = self.tokenizer.get_character()
 
+	def expect_end(self):
+		self.code.append(';' + ''.join(self.tokenizer.last_line))
+		if False:
+			self.code.append(f' stack:{self.stack_position}')
+		self.code.append('\n')
+		self.tokenizer.expect_end()
+
 	def print_tokens(self):
 		while self.tokenizer.get_token():
 			print('Token:', ''.join(self.tokenizer.token))
@@ -149,29 +156,50 @@ class Compiler:
 			# add/sub esp, stack_position - self.stack_position
 			self.stack_position = stack_position
 			self.symbol_table.table = self.symbol_table.table[0:scope_level]
-			
+		elif self.variable_declaration():
+			pass
 		elif self.tokenizer.accept('if'):
 			pass
 		elif self.tokenizer.accept('return'):
 			self.expression()
-			# TODO: Fix stack
+			self.fix_stack()
 			self.code.append('ret')
-			self.tokenizer.expect_end()
+			self.expect_end()
 		else:
 			self.expression()
-			self.tokenizer.expect_end()
+			self.expect_end()
+
+	def fix_stack(self):
+		if self.stack_position != 0:
+			self.code.append('add esp,' + str(self.stack_position))
+			self.stack_position = 0
 
 	def variable_declaration(self):
 		symbol = self.symbol_table.lookup(self.tokenizer.token_string())
-		if symbol and symbol.symbol_type == 'Type':
-			self.tokenizer.get_token()
-			name = self.tokenizer.token_string()
-			identifier = self.symbol_table.lookup(name)
-			if identifier:
-				# TODO: add more descriptive error message
-				# including where the variable is previously declared
-				self.fail('variable "' + name + '" was previously declared')
-			identifier = self.symbol_table.declare(Variable(name))
+		if not symbol or symbol.symbol_type != 'Type':
+			return False
+		self.tokenizer.get_token()
+		name = self.tokenizer.token_string()
+		identifier = self.symbol_table.lookup(name)
+		if identifier:
+			# TODO: add more descriptive error message
+			# including where the variable is previously declared
+			self.fail('variable "' + name + '" was previously declared')
+		variable = Variable(name, 'local', '')
+		identifier = self.symbol_table.declare(variable)
+		self.tokenizer.get_token()
+
+		# assignment
+		if self.tokenizer.accept('='):
+			self.expression()
+			self.binary1()
+			self.expect_end()
+		else:
+			self.code.append('push 0')
+			self.stack_position += self.word_size
+		variable.stack_position = self.stack_position
+		return True
+
 
 	def expression(self):
 		self.additive_expression()
@@ -321,7 +349,9 @@ class Compiler:
 			pass
 
 		elif self.identifier():
-			# mov eax,[esp+x]  # argument / local variable
+			identifier = self.current_identifier
+			if identifier.variable_type == 'local':
+				self.code.append('mov eax,[esp+' + str(self.stack_position-identifier.stack_position) + ']')
 			# mov eax,[0x402000]  # global variable
 			print('identifier', self.identifier)
 			self.tokenizer.get_token()

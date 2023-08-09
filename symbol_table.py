@@ -31,6 +31,11 @@ class Variable(Symbol):
 		self.variable_type = variable_type
 		self.sub_type = sub_type
 
+	def __str__(self):
+		return f'Variable("{self.name}" [{self.variable_type}] stack:{self.stack_position})'  
+
+	def __repr__(self):
+		return str(self)
 
 class Scope(dict):
 	def __init__(self, scope_type) -> None:
