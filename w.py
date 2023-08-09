@@ -177,10 +177,10 @@ class Compiler:
 			self.expression()
 			self.expect_end()
 
-	def fix_stack(self):
-		if self.stack_position != 0:
-			self.code.append('add esp,' + str(self.stack_position))
-			self.stack_position = 0
+	def fix_stack(self, stack_position=0):
+		if self.stack_position > stack_position:
+			self.code.append('add esp,' + str(self.stack_position - stack_position))
+			self.stack_position = stack_position
 
 	def variable_declaration(self):
 		symbol_type = self.symbol_table.lookup(self.tokenizer.token_string())
@@ -364,18 +364,15 @@ class Compiler:
 					self.binary1()
 				self.tokenizer.expect(')')
 			self.code.append('call ' + identifier.name)
-			# mov_eax_esp_plus((stack_pos - s - 1) << word_size_log2)
-			# call_eax()
-			# fix_stack:
-			# be_pop(stack_pos - s)
-			# stack_pos = s
+			self.fix_stack(stack_position)
 
 	def code_for_identifier(self, identifier):
 		if identifier.symbol_type == 'Function':
 			# self.code.append('mov eax,' + identifier.name)
 			pass
 		elif identifier.symbol_type == 'Variable':
-			stack_position = self.stack_position - identifier.stack_position
+			print(identifier.name, self.stack_position, identifier.stack_position)
+			stack_position = self.stack_position + identifier.stack_position
 			# For arguments we need to account for the return address
 			# that is pushed onto the stack in the 'call' instruction
 			if identifier.sub_type == 'Argument':

@@ -90,8 +90,9 @@ class Tokenizer:
 					self.take_char()
 
 			# Braces (not used?)
+			# Function operators and expression parenthesis
 			if len(self.token) == 0:
-				if self.nextc in ['(', ')', ':']:
+				if self.nextc in ['(', ',', ')', ':']:
 					self.take_char()
 
 			# Strings (including comments)
