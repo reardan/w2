@@ -343,6 +343,25 @@ class Compiler:
 
 	def postfix_expression(self):
 		self.primary_expression()
+		if self.tokenizer.accept('('):
+			# TODO: make sure last_identifier is callable
+			stack_position = self.stack_position
+			self.binary1()
+			if not self.tokenizer.accept(')'):
+				# this would be nice to have in a repeat..until
+				self.expression()
+				self.binary1()
+				while self.tokenizer.accept(','):
+					self.expression()
+					self.binary1()
+				self.tokenizer.expect(')')
+		# mov_eax_esp_plus((stack_pos - s - 1) << word_size_log2)
+		# call_eax()
+		# fix_stack:
+		# be_pop(stack_pos - s)
+		# stack_pos = s
+
+
 
 	def primary_expression(self):
 		if self.int_literal():

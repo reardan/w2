@@ -40,6 +40,12 @@ var: FORCE
 	chmod +x samples/var
 	samples/var
 
+call: FORCE
+	python w.py samples/call.w
+	fasm samples/call.asm
+	chmod +x samples/call
+	samples/call
+
 clean:
 	rm samples/*.asm
 	rm samples/simple
