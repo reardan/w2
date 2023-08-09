@@ -2,13 +2,4 @@
 __pycache__/
 bin/
 test
-samples/*.asm
-samples/add
-samples/modulus
-samples/multiply
-samples/not
-samples/simple
-samples/sub
-samples/var
-samples/call
-samples/call2
+samples/bin/

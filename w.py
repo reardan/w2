@@ -440,7 +440,10 @@ class Compiler:
 		return self.current_identifier
 
 	def output_asm(self):
-		output_filename = ''.join(self.root_filename.split('.')[:-1]) + '.asm'
+		dir = self.root_filename.split('/')
+		dir.insert(1, 'bin')
+		dir[-1] = dir[-1].split('.')[0] + '.asm'
+		output_filename = '/'.join(dir)
 		f = open(output_filename, 'w', encoding='utf8')
 		asm = '\n'.join(self.code)
 		f.write(asm)
