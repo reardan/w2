@@ -387,6 +387,9 @@ class Compiler:
 		if self.int_literal():
 			pass
 
+		elif self.string_literal():
+			pass
+
 		elif self.identifier():
 			self.code_for_identifier(self.current_identifier)
 			self.tokenizer.get_token()
@@ -429,13 +432,57 @@ class Compiler:
 		
 		self.code.append('mov eax,' + str(n))
 		return True
-
-	def string_literal(self):
+	
+	def process_substring(self, string, char):
 		pass
+
+	def process_string(self, token):
+		string = ['"']
+		quote = True
+		i = 1
+		length = 1
+		while i < len(token) - 1:
+			if token[i] == '\\':
+				if token[i+1] == '\\':
+					string.append('\\')
+				elif token[i+1] == 'n':
+					if quote:
+						quote = False
+						string.append('"')
+					string.append(', ')
+					string.append('0ah')
+				#elif token[i+1] == 'x':
+				else:
+					self.fail('Unrecognized string escape character "' + token[i+1] + '"')
+				i += 1
+			else:
+				if not quote:
+					string.append(', "')
+					quote = True
+				string.append(token[i])
+			i += 1
+			length += 1
+		
+		if quote:
+			string.append('"')
+
+		string.append(', 0')
+
+		return ''.join(string), length
+	
+	def string_literal(self):
+		if self.tokenizer.token and self.tokenizer.token[0] == '"':
+			# Process string with \ formatting
+			string, length = self.process_string(self.tokenizer.token_string())
+			self.code.append('call $ + ' + str(length+1+self.word_size))
+			self.code.append('db ' + string)
+			self.code.append('pop eax')
+			return True
+		return False
 
 	def identifier(self):
 		token = self.tokenizer.token_string()
-		# Should this be stored like this?
+		# Should this be stored like this? ya
 		self.current_identifier = self.symbol_table.lookup(token)
 		return self.current_identifier
 

@@ -52,6 +52,18 @@ call2: FORCE
 	chmod +x samples/bin/call2
 	samples/bin/call2
 
+string: FORCE
+	python w.py samples/string.w
+	fasm samples/bin/string.asm
+	chmod +x samples/bin/string
+	samples/bin/string
+
+hello: FORCE
+	python w.py samples/hello.w
+	fasm samples/bin/hello.asm
+	chmod +x samples/bin/hello
+	samples/bin/hello
+
 clean:
 	rm samples/*.asm
 	rm samples/simple
