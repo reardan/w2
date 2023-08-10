@@ -303,67 +303,31 @@ class Compiler:
 		self.assignment_expression()
 
 	def assignment_expression(self):
-		self.additive_expression()
+		self.relational_expression()
 		if self.tokenizer.accept('='):
 			# TODO: assert current_identifier is a variable
 			identifier = self.current_identifier
 			self.expression()
 			self.assign_to_identifier(identifier)
 
-	def logical_or_expression(self):
-		if self.logical_and_expression():
-			return True
-		self.logical_or_expression()
-		self.tokenizer.expect('or')
-		self.logical_and_expression()
-
-	def logical_and_expression(self):
-		if self.inclusive_or_expression():
-			return True
-		self.logical_and_expression()
-		self.tokenizer.expect('and')
-		self.bitwise_or_expression()
-
-	def bitwise_or_expression(self):
-		if self.bitwise_xor_expression(self):
-			return True
-		self.bitwise_or_expression()
-		self.tokenizer.expect('|')
-		self.bitwise_xor_expression()
-
-	def bitwise_xor_expression(self):
-		if self.bitwise_and_expression():
-			return True
-		self.bitwise_xor_expression()
-		self.tokenizer.expect('^')
-		self.bitwise_and_expression()
-	
-	def bitwise_and_expression(self):
-		if self.equality_expression():
-			return True
-		self.bitwise_and_expression()
-		self.tokenizer.expect('&')
-		self.equality_expression()
-
-	def equality_expression(self):
-		if self.relational_expression():
-			return True
-		self.equality_expression()
-		if self.tokenizer.accept('=='):
-			pass
-		elif self.tokenizer.accept('!='):
-			pass
-		else:
-			self.fail('Problem in equality_expression()')
-		
-		self.relational_expression()
-		return True
+	def relational_code(self, operation):
+		self.binary1()
+		self.additive_expression()
+		self.binary2_pop()
+		self.code.append('cmp ebx,eax')
+		self.code.append(operation + ' al')
+		self.code.append('movzx eax,al')
 
 	def relational_expression(self):
-		pass
-	
-	def shift_expression(self):
-		pass
+		self.additive_expression()
+		if self.tokenizer.accept('<'):
+			self.relational_code('setl')
+		elif self.tokenizer.accept('<='):
+			self.relational_code('setle')
+		elif self.tokenizer.accept('>'):
+			self.relational_code('setg')
+		elif self.tokenizer.accept('>='):
+			self.relational_code('setge')
 
 	def binary1(self):
 		self.code.append('push eax')
@@ -456,7 +420,7 @@ class Compiler:
 
 	def identifier_stack_position(self, identifier):
 		if identifier.symbol_type == 'Variable':
-			print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
+			# print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
 			if identifier.sub_type == 'Local':
 				stack_position = self.stack_position - identifier.stack_position
 			# For arguments we need to account for the return address
