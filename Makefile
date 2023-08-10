@@ -40,6 +40,12 @@ var: FORCE
 	chmod +x samples/bin/var
 	samples/bin/var
 
+var2: FORCE
+	python w.py samples/var2.w
+	fasm samples/bin/var2.asm
+	chmod +x samples/bin/var2
+	samples/bin/var2
+
 call: FORCE
 	python w.py samples/call.w
 	fasm samples/bin/call.asm
