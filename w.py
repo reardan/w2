@@ -220,14 +220,14 @@ class Compiler:
 		self.binary1()  # end
 		self.code.append('push 1')  # counter
 		self.stack_position += self.word_size
-		"""
-		if self.accept(','):
+		if self.tokenizer.accept(','):
 			self.expression()
-			self.binary1()
-		if self.accept(','):
+			self.code.append('mov ebx,[esp+'+str(self.stack_position+iterator_position-self.word_size*2)+']')
+			self.code.append('mov [esp+'+str(self.stack_position+iterator_position-self.word_size)+'],ebx')
+			self.code.append('mov [esp+'+str(self.stack_position+iterator_position-self.word_size*2)+'],eax')
+		if self.tokenizer.accept(','):
 			self.expression()
-			self.binary1()
-		"""
+			self.code.append('mov [esp+'+str(self.stack_position+iterator_position-self.word_size*3)+'],eax')
 		if not self.tokenizer.accept(')'):
 			self.fail('for loop parsing failed: expected ")" after "range(..."')
 		self.label_counters['for_start'] += 1

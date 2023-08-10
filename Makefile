@@ -76,6 +76,18 @@ for: FORCE
 	chmod +x samples/bin/for
 	samples/bin/for
 
+for2: FORCE
+	python w.py samples/for2.w
+	fasm samples/bin/for2.asm
+	chmod +x samples/bin/for2
+	samples/bin/for2
+
+for3: FORCE
+	python w.py samples/for3.w
+	fasm samples/bin/for3.asm
+	chmod +x samples/bin/for3
+	samples/bin/for3
+
 clean:
 	rm samples/*.asm
 	rm samples/simple
