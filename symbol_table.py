@@ -5,11 +5,12 @@ class Symbol:
 
 
 class Type(Symbol):
-	def __init__(self, name, size, pointer_level=0):
+	def __init__(self, name, size, pointer_level=0, signed=False):
 		"""size is in bytes."""
 		super().__init__(name, 'Type')
 		self.size = size
 		self.pointer_level = pointer_level
+		self.signed = signed
 
 
 class Function(Symbol):

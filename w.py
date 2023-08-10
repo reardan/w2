@@ -44,14 +44,14 @@ class Compiler:
 	def define_base_types(self):
 		self.symbol_table.declare(Type('void', 0))
 
-		self.symbol_table.declare(Type('char', 1))
+		self.symbol_table.declare(Type('char', 1, signed=True))
 		self.symbol_table.declare(Type('byte', 1))
 
-		self.symbol_table.declare(Type('int', self.word_size))
-		self.symbol_table.declare(Type('int8', 1))
-		self.symbol_table.declare(Type('int16', 2))
-		self.symbol_table.declare(Type('int32', 4))
-		self.symbol_table.declare(Type('int64', 8))
+		self.symbol_table.declare(Type('int', self.word_size, signed=True))
+		self.symbol_table.declare(Type('int8', 1, signed=True))
+		self.symbol_table.declare(Type('int16', 2, signed=True))
+		self.symbol_table.declare(Type('int32', 4, signed=True))
+		self.symbol_table.declare(Type('int64', 8, signed=True))
 
 		self.symbol_table.declare(Type('uint', self.word_size))
 		self.symbol_table.declare(Type('uint8', 1))
