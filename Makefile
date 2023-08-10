@@ -124,6 +124,12 @@ pointer: FORCE
 	chmod +x samples/bin/pointer
 	samples/bin/pointer
 
+array: FORCE
+	python w.py samples/array.w
+	fasm samples/bin/array.asm
+	chmod +x samples/bin/array
+	samples/bin/array
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

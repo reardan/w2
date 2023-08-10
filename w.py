@@ -1,4 +1,5 @@
 import sys
+from math import log2
 from collections import defaultdict
 
 from tokenizer import Tokenizer
@@ -39,6 +40,9 @@ class Compiler:
 
 		# Used when dereferencing pointers via "@"
 		self.pointer_dereference = 0
+
+		# used for array assignments
+		self.array_assignment = False
 
 	def compile(self):
 		self.define_base_types()
@@ -335,8 +339,14 @@ class Compiler:
 			# TODO: assert current_identifier is a variable
 			identifier = self.current_identifier
 			pointer_dereference = self.pointer_dereference
+			if self.array_assignment:
+				self.binary1()
 			self.expression()
-			self.assign_to_identifier(identifier, pointer_dereference)
+			if self.array_assignment:
+				self.binary2_pop()
+				self.code.append('mov [ebx],eax')
+			else:
+				self.assign_to_identifier(identifier, pointer_dereference)
 			self.pointer_dereference = 0
 
 	def equality_expression(self):
@@ -429,6 +439,7 @@ class Compiler:
 				return
 
 	def unary_expression(self):
+		# TODO: convert these to elif chain?
 		if self.tokenizer.accept('&'):
 			self.address_of = True
 		while self.tokenizer.accept('@'):
@@ -460,6 +471,17 @@ class Compiler:
 				self.tokenizer.expect(')')
 			self.code.append('call ' + identifier.name)
 			self.fix_stack(stack_position)
+		elif self.tokenizer.accept('['):
+			identifier = self.current_identifier
+			# TODO: make sure identifier is indexable
+			self.binary1()
+			self.expression()
+			self.code.append('shl eax,' + str(int(log2(identifier.variable_type.size))))
+			self.binary2_pop()
+			self.code.append('add eax,ebx')
+			self.array_assignment = True
+			if not self.tokenizer.accept(']'):
+				self.fail('Expected closing "]" for index expression')
 
 	def identifier_stack_position(self, identifier):
 		if identifier.symbol_type == 'Variable':

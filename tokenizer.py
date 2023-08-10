@@ -89,8 +89,9 @@ class Tokenizer:
 				if self.nextc in ['+', '-', '/', '%', '*']:
 					self.take_char()
 
+			# Pointer and array operations
 			if len(self.token) == 0:
-				if self.nextc == '@':
+				if self.nextc in {'@', '[', ']'}:
 					self.take_char()
 
 			# Braces (not used?)
