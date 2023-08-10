@@ -175,6 +175,8 @@ class Compiler:
 			pass
 		elif self.while_statement():
 			pass
+		elif self.repeat_statement():
+			pass
 		elif self.for_statement():
 			pass
 		elif self.tokenizer.accept('return'):
@@ -221,6 +223,18 @@ class Compiler:
 		self.code.append('jmp '+while_start_label)
 		self.code.append(while_end_label + ':')
 		return True
+	
+	def repeat_statement(self):
+		if not self.tokenizer.accept('repeat'):
+			return False
+		repeat_start_label = self.next_label('repeat_start')
+		self.code.append(repeat_start_label+':')
+		self.statement()
+		if not self.tokenizer.accept('until'):
+			self.fail('expected matching "until" for "repeat" statement')
+		self.expression()
+		self.code.append('test eax,eax')
+		self.code.append('jz '+ repeat_start_label)
 
 	def for_statement(self):
 		if not self.tokenizer.accept('for'):

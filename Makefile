@@ -106,6 +106,12 @@ while2: FORCE
 	chmod +x samples/bin/while2
 	samples/bin/while2
 
+repeat: FORCE
+	python w.py samples/repeat.w
+	fasm samples/bin/repeat.asm
+	chmod +x samples/bin/repeat
+	samples/bin/repeat
+
 assignment: FORCE
 	python w.py samples/assignment.w
 	fasm samples/bin/assignment.asm
