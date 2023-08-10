@@ -88,6 +88,12 @@ for3: FORCE
 	chmod +x samples/bin/for3
 	samples/bin/for3
 
+while: FORCE
+	python w.py samples/while.w
+	fasm samples/bin/while.asm
+	chmod +x samples/bin/while
+	samples/bin/while
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

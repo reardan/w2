@@ -173,6 +173,8 @@ class Compiler:
 			pass
 		elif self.if_statement():
 			pass
+		elif self.while_statement():
+			pass
 		elif self.for_statement():
 			pass
 		elif self.tokenizer.accept('return'):
@@ -201,6 +203,24 @@ class Compiler:
 			self.statement()
 		self.code.append(end_if_label + ':')
 		return True
+	
+	def next_label(self, name):
+		self.label_counters[name] += 1
+		return name + '_' + str(self.label_counters[name])
+
+	def while_statement(self):
+		if not self.tokenizer.accept('while'):
+			return False
+		self.expression()
+		while_start_label = self.next_label('while_start')
+		while_end_label = self.next_label('while_end')
+		self.code.append(while_start_label+':')
+		self.code.append('test eax,eax')
+		self.code.append('jz '+ while_end_label)
+		self.statement()
+		self.code.append('jmp '+while_start_label)
+		self.code.append(while_end_label + ':')
+		return True
 
 	def for_statement(self):
 		if not self.tokenizer.accept('for'):
@@ -215,7 +235,7 @@ class Compiler:
 		if not self.tokenizer.accept('('):
 			self.fail('for loop parsing failed: expected "(" after "range"')
 		# Setup stack for iterator (initial, end, counter)
-		# initial is already declared in variable_declaration()
+		# initial is already on stack via variable_declaration()
 		self.expression()
 		self.binary1()  # end
 		self.code.append('push 1')  # counter
