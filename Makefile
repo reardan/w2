@@ -94,6 +94,12 @@ while: FORCE
 	chmod +x samples/bin/while
 	samples/bin/while
 
+assignment: FORCE
+	python w.py samples/assignment.w
+	fasm samples/bin/assignment.asm
+	chmod +x samples/bin/assignment
+	samples/bin/assignment
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

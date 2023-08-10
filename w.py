@@ -299,19 +299,16 @@ class Compiler:
 		variable.stack_position = self.stack_position
 		return True
 
-
 	def expression(self):
-		self.additive_expression()
-		if self.tokenizer.accept('='):
-			pass
-		pass
+		self.assignment_expression()
 
 	def assignment_expression(self):
-		if self.logical_or_expression():
-			return True
-		self.unary_expression()
-		self.assignment_operator()
-		self.assignment_epxression()
+		self.additive_expression()
+		if self.tokenizer.accept('='):
+			# TODO: assert current_identifier is a variable
+			identifier = self.current_identifier
+			self.expression()
+			self.assign_to_identifier(identifier)
 
 	def logical_or_expression(self):
 		if self.logical_and_expression():
@@ -457,18 +454,28 @@ class Compiler:
 			self.code.append('call ' + identifier.name)
 			self.fix_stack(stack_position)
 
-	def code_for_identifier(self, identifier):
-		if identifier.symbol_type == 'Function':
-			# self.code.append('mov eax,' + identifier.name)
-			pass
-		elif identifier.symbol_type == 'Variable':
-			print(identifier.name, self.stack_position, identifier.stack_position)
+	def identifier_stack_position(self, identifier):
+		if identifier.symbol_type == 'Variable':
 			stack_position = self.stack_position + identifier.stack_position
 			# For arguments we need to account for the return address
 			# that is pushed onto the stack in the 'call' instruction
 			if identifier.sub_type == 'Argument':
 				stack_position += self.word_size
+			return stack_position
+
+	def assign_to_identifier(self, identifier):
+		if identifier.symbol_type == 'Variable':
+			stack_position = self.identifier_stack_position(identifier)
 			if identifier.sub_type == 'Local' or identifier.sub_type == 'Argument':
+				self.code.append('mov [esp+' + str(stack_position) + '],eax')
+
+	def code_for_identifier(self, identifier):
+		if identifier.symbol_type == 'Function':
+			# self.code.append('mov eax,' + identifier.name)
+			pass
+		elif identifier.symbol_type == 'Variable':
+			if identifier.sub_type == 'Local' or identifier.sub_type == 'Argument':
+				stack_position = self.identifier_stack_position(identifier)
 				self.code.append('mov eax,[esp+' + str(stack_position) + ']')
 			# mov eax,[0x402000]  # global variable
 		else:
