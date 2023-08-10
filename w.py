@@ -317,20 +317,33 @@ class Compiler:
 		self.assignment_expression()
 
 	def assignment_expression(self):
-		self.relational_expression()
+		self.equality_expression()
 		if self.tokenizer.accept('='):
 			# TODO: assert current_identifier is a variable
 			identifier = self.current_identifier
 			self.expression()
 			self.assign_to_identifier(identifier)
 
-	def relational_code(self, operation):
+	def equality_expression(self):
+		self.relational_expression()
+		if self.tokenizer.accept('=='):
+			self.equality_code('sete')
+		if self.tokenizer.accept('!='):
+			self.equality_code('setne')
+
+	def relational_sub(self, operation, target_rule):
 		self.binary1()
-		self.additive_expression()
+		target_rule()
 		self.binary2_pop()
 		self.code.append('cmp ebx,eax')
 		self.code.append(operation + ' al')
 		self.code.append('movzx eax,al')
+
+	def equality_code(self, operation):
+		self.relational_sub(operation, self.relational_expression)
+
+	def relational_code(self, operation):
+		self.relational_sub(operation, self.additive_expression)
 
 	def relational_expression(self):
 		self.additive_expression()
