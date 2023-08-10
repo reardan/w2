@@ -64,6 +64,12 @@ hello: FORCE
 	chmod +x samples/bin/hello
 	samples/bin/hello
 
+if: FORCE
+	python w.py samples/if.w
+	fasm samples/bin/if.asm
+	chmod +x samples/bin/if
+	samples/bin/if
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

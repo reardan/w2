@@ -1,4 +1,5 @@
 import sys
+from collections import defaultdict
 
 from tokenizer import Tokenizer
 from symbol_table import *
@@ -29,6 +30,9 @@ class Compiler:
 
 		# code output
 		self.code = []
+
+		# label counters for asm output
+		self.label_counters = defaultdict(int)
 
 	def compile(self):
 		self.define_base_types()
@@ -166,7 +170,7 @@ class Compiler:
 			self.symbol_table.table = self.symbol_table.table[0:scope_level]
 		elif self.variable_declaration():
 			pass
-		elif self.tokenizer.accept('if'):
+		elif self.if_statement():
 			pass
 		elif self.tokenizer.accept('return'):
 			self.expression()
@@ -176,6 +180,30 @@ class Compiler:
 		else:
 			self.expression()
 			self.expect_end()
+
+	def if_statement(self):
+		if not self.tokenizer.accept('if'):
+			return False
+		self.expression()
+		self.label_counters['else_label'] += 1
+		else_label = 'else_label_' + str(self.label_counters['else_label'])
+		self.label_counters['end_if_label'] += 1
+		end_if_label = 'end_if_label_' + str(self.label_counters['end_if_label'])
+		self.code.append('test eax,eax')
+		self.code.append('jz ' + else_label)
+		self.statement()
+		self.code.append('jmp ' + end_if_label)
+		self.code.append(else_label + ':')
+		if self.tokenizer.accept('else'):
+			self.statement()
+		self.code.append(end_if_label + ':')
+		return True
+
+	def for_statement(self):
+		if not self.tokenizer.accept('for'):
+			return False
+		
+		return True
 
 	def fix_stack(self, stack_position=0):
 		if self.stack_position > stack_position:
@@ -416,25 +444,22 @@ class Compiler:
 			negative = True
 			# This is potentially problematic because it could
 			# accept '-' without doing anything
-		
+
 		token = self.tokenizer.token
 		if not token:
 			return False
 		first = token[0]
 		if first < '0' or first > '9':
 			return False
-		
+
 		for c in token:
 			n = (n << 1) + (n << 3) + int(c)
 
 		if negative:
 			n = 0 - n
-		
+
 		self.code.append('mov eax,' + str(n))
 		return True
-	
-	def process_substring(self, string, char):
-		pass
 
 	def process_string(self, token):
 		string = ['"']
