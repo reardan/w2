@@ -70,6 +70,12 @@ if: FORCE
 	chmod +x samples/bin/if
 	samples/bin/if
 
+for: FORCE
+	python w.py samples/for.w
+	fasm samples/bin/for.asm
+	chmod +x samples/bin/for
+	samples/bin/for
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

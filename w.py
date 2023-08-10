@@ -159,6 +159,7 @@ class Compiler:
 
 	def statement(self):
 		if self.tokenizer.accept(':'):
+			self.expect_end()
 			self.symbol_table.add_scope('Inner')
 			stack_position = self.stack_position
 			scope_level = len(self.symbol_table.table)
@@ -171,6 +172,8 @@ class Compiler:
 		elif self.variable_declaration():
 			pass
 		elif self.if_statement():
+			pass
+		elif self.for_statement():
 			pass
 		elif self.tokenizer.accept('return'):
 			self.expression()
@@ -202,7 +205,46 @@ class Compiler:
 	def for_statement(self):
 		if not self.tokenizer.accept('for'):
 			return False
-		
+		iterator_position = self.stack_position
+		if not self.variable_declaration():
+			self.fail('Could not find variable declaration inside for loop')
+		if not self.tokenizer.accept('in'):
+			self.fail('for loop parsing failed: expected "in" after variable declaration')
+		if not self.tokenizer.accept('range'):
+			self.fail('for loop parsing failed: expected "range" after "in"')
+		if not self.tokenizer.accept('('):
+			self.fail('for loop parsing failed: expected "(" after "range"')
+		# Setup stack for iterator (initial, end, counter)
+		# initial is already declared in variable_declaration()
+		self.expression()
+		self.binary1()  # end
+		self.code.append('push 1')  # counter
+		self.stack_position += self.word_size
+		"""
+		if self.accept(','):
+			self.expression()
+			self.binary1()
+		if self.accept(','):
+			self.expression()
+			self.binary1()
+		"""
+		if not self.tokenizer.accept(')'):
+			self.fail('for loop parsing failed: expected ")" after "range(..."')
+		self.label_counters['for_start'] += 1
+		for_start_label = 'for_start_' + str(self.label_counters['for_start'])
+		self.label_counters['for_end'] += 1
+		for_end_label = 'for_end_' + str(self.label_counters['for_end'])
+		self.code.append(for_start_label + ':')
+		self.code.append('mov eax,[esp+'+str(self.stack_position+iterator_position-self.word_size)+']')
+		self.code.append('mov ebx,[esp+'+str(self.stack_position+iterator_position-self.word_size*2)+']')
+		self.code.append('cmp eax,ebx')
+		self.code.append('je ' + for_end_label)
+		self.statement()
+		self.code.append('mov eax,[esp+'+str(self.stack_position+iterator_position-self.word_size*3)+']')
+		self.code.append('add [esp+'+str(self.stack_position+iterator_position-self.word_size)+'],eax')
+		self.code.append('jmp '+for_start_label)
+		self.code.append(for_end_label + ':')
+		self.fix_stack(iterator_position)
 		return True
 
 	def fix_stack(self, stack_position=0):
@@ -222,6 +264,7 @@ class Compiler:
 			# including where the variable is previously declared
 			self.fail('variable "' + name + '" was previously declared')
 		variable = Variable(name, symbol_type, 'Local')
+		self.current_variable = variable
 		identifier = self.symbol_table.declare(variable)
 		self.tokenizer.get_token()
 
