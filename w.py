@@ -456,12 +456,13 @@ class Compiler:
 
 	def identifier_stack_position(self, identifier):
 		if identifier.symbol_type == 'Variable':
-			# print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
-			stack_position = self.stack_position - identifier.stack_position
+			print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
+			if identifier.sub_type == 'Local':
+				stack_position = self.stack_position - identifier.stack_position
 			# For arguments we need to account for the return address
 			# that is pushed onto the stack in the 'call' instruction
 			if identifier.sub_type == 'Argument':
-				stack_position += self.word_size
+				stack_position = self.stack_position + identifier.stack_position + self.word_size
 			return stack_position
 
 	def assign_to_identifier(self, identifier):
