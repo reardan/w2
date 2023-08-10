@@ -89,6 +89,10 @@ class Tokenizer:
 				if self.nextc in ['+', '-', '/', '%', '*']:
 					self.take_char()
 
+			if len(self.token) == 0:
+				if self.nextc == '@':
+					self.take_char()
+
 			# Braces (not used?)
 			# Function operators and expression parenthesis
 			if len(self.token) == 0:

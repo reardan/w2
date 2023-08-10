@@ -34,6 +34,12 @@ class Compiler:
 		# label counters for asm output
 		self.label_counters = defaultdict(int)
 
+		# Used to compute an address rather than value of a variable via "&"
+		self.address_of = False
+
+		# Used when dereferencing pointers via "@"
+		self.pointer_dereference = 0
+
 	def compile(self):
 		self.define_base_types()
 		self.define_linux_syscall()
@@ -291,15 +297,21 @@ class Compiler:
 		if not symbol_type or symbol_type.symbol_type != 'Type':
 			return False
 		self.tokenizer.get_token()
+
+		# pointer indirection "*"
+		pointer_level = 0
+		while self.tokenizer.accept('*'):
+			pointer_level += 1
+
 		name = self.tokenizer.token_string()
 		identifier = self.symbol_table.lookup(name)
 		if identifier:
 			# TODO: add more descriptive error message
 			# including where the variable is previously declared
 			self.fail('variable "' + name + '" was previously declared')
-		variable = Variable(name, symbol_type, 'Local')
+		variable = Variable(name, symbol_type, 'Local', pointer_level=pointer_level)
 		self.current_variable = variable
-		identifier = self.symbol_table.declare(variable)
+		self.symbol_table.declare(variable)
 		self.tokenizer.get_token()
 
 		# assignment
@@ -311,6 +323,7 @@ class Compiler:
 			self.code.append('push 0')
 			self.stack_position += self.word_size
 		variable.stack_position = self.stack_position
+		print('declaring variable ' + str(variable))
 		return True
 
 	def expression(self):
@@ -321,8 +334,10 @@ class Compiler:
 		if self.tokenizer.accept('='):
 			# TODO: assert current_identifier is a variable
 			identifier = self.current_identifier
+			pointer_dereference = self.pointer_dereference
 			self.expression()
-			self.assign_to_identifier(identifier)
+			self.assign_to_identifier(identifier, pointer_dereference)
+			self.pointer_dereference = 0
 
 	def equality_expression(self):
 		self.relational_expression()
@@ -415,9 +430,9 @@ class Compiler:
 
 	def unary_expression(self):
 		if self.tokenizer.accept('&'):
-			pass
-		if self.tokenizer.accept('*'):
-			pass
+			self.address_of = True
+		while self.tokenizer.accept('@'):
+			self.pointer_dereference += 1
 		if self.tokenizer.accept('!'):
 			# this seems wrong
 			# should it be expression?
@@ -427,6 +442,7 @@ class Compiler:
 			self.code.append('not eax')
 			return
 		self.postfix_expression()
+		self.address_of = False
 
 	def postfix_expression(self):
 		self.primary_expression()
@@ -456,11 +472,17 @@ class Compiler:
 				stack_position = self.stack_position + identifier.stack_position + self.word_size
 			return stack_position
 
-	def assign_to_identifier(self, identifier):
+	def assign_to_identifier(self, identifier, pointer_dereference):
 		if identifier.symbol_type == 'Variable':
 			stack_position = self.identifier_stack_position(identifier)
 			if identifier.sub_type == 'Local' or identifier.sub_type == 'Argument':
-				self.code.append('mov [esp+' + str(stack_position) + '],eax')
+				if pointer_dereference > 0:
+					self.code.append('mov ebx,[esp+' + str(stack_position) + ']')
+					for i in range(pointer_dereference-1):
+						self.code.append('mov ebx,[ebx]')
+					self.code.append('mov [ebx],eax')
+				else:
+					self.code.append('mov [esp+' + str(stack_position) + '],eax')
 
 	def code_for_identifier(self, identifier):
 		if identifier.symbol_type == 'Function':
@@ -469,7 +491,10 @@ class Compiler:
 		elif identifier.symbol_type == 'Variable':
 			if identifier.sub_type == 'Local' or identifier.sub_type == 'Argument':
 				stack_position = self.identifier_stack_position(identifier)
-				self.code.append('mov eax,[esp+' + str(stack_position) + ']')
+				if self.address_of:
+					self.code.append('lea eax,[esp+' + str(stack_position) + ']')
+				else:
+					self.code.append('mov eax,[esp+' + str(stack_position) + ']')
 			# mov eax,[0x402000]  # global variable
 		else:
 			self.fail('Unprocesed symbol_type: ' + identifier.symbol_type)

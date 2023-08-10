@@ -118,6 +118,12 @@ assignment: FORCE
 	chmod +x samples/bin/assignment
 	samples/bin/assignment
 
+pointer: FORCE
+	python w.py samples/pointer.w
+	fasm samples/bin/pointer.asm
+	chmod +x samples/bin/pointer
+	samples/bin/pointer
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

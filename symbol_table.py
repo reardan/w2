@@ -5,11 +5,10 @@ class Symbol:
 
 
 class Type(Symbol):
-	def __init__(self, name, size, pointer_level=0, signed=False):
+	def __init__(self, name, size, signed=False):
 		"""size is in bytes."""
 		super().__init__(name, 'Type')
 		self.size = size
-		self.pointer_level = pointer_level
 		self.signed = signed
 
 
@@ -27,13 +26,14 @@ class Function(Symbol):
 
 
 class Variable(Symbol):
-	def __init__(self, name, variable_type, sub_type):
+	def __init__(self, name, variable_type, sub_type, pointer_level=0):
 		super().__init__(name, 'Variable')
 		self.variable_type = variable_type
 		self.sub_type = sub_type
+		self.pointer_level = pointer_level
 
 	def __str__(self):
-		return f'Variable("{self.name}" [{self.variable_type}] stack:{self.stack_position})'  
+		return f'Variable("{self.name}" [{self.variable_type.name}{"*" * self.pointer_level}] stack:{self.stack_position})'  
 
 	def __repr__(self):
 		return str(self)
