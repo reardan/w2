@@ -148,6 +148,12 @@ array: FORCE
 	chmod +x samples/bin/array
 	samples/bin/array
 
+char_array: FORCE
+	python w.py samples/char_array.w
+	fasm samples/bin/char_array.asm
+	chmod +x samples/bin/char_array
+	samples/bin/char_array
+
 clean:
 	rm samples/*.asm
 	rm samples/simple

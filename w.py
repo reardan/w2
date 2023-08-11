@@ -364,8 +364,17 @@ class Compiler:
 				self.binary1()
 			self.expression()
 			if self.array_assignment:
+				# this is duplicate inside assign_to_identifier()
 				self.binary2_pop()
-				self.code.append('mov [ebx],eax')
+				print('assignment_expression', identifier)
+				if identifier.variable_type.size == 1:
+					self.code.append('mov [ebx],al')
+				elif identifier.variable_type.size == 2:
+					self.code.append('mov [ebx],ax')
+				elif identifier.variable_type.size == 4:
+					self.code.append('mov [ebx],eax')
+				else:
+					self.fail('variable type size {identifier.variable_type.size} not implemented')
 			else:
 				self.assign_to_identifier(identifier, pointer_dereference)
 
@@ -504,6 +513,10 @@ class Compiler:
 			# TODO: make sure identifier is indexable
 			self.binary1()
 			self.expression()
+
+			# The following is needed because we could have an identifier inside
+			# the postfix expression e.g. arr[i]
+			self.current_identifier = identifier
 			if identifier.variable_type.size > 1:
 				self.code.append('shl eax,' + str(int(log2(identifier.variable_type.size))))
 			self.binary2_pop()
@@ -515,7 +528,7 @@ class Compiler:
 
 	def identifier_stack_position(self, identifier):
 		if identifier.symbol_type == 'Variable':
-			print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
+			# print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
 			if identifier.sub_type == 'Local':
 				stack_position = self.stack_position - identifier.stack_position
 			# For arguments we need to account for the return address
@@ -532,7 +545,15 @@ class Compiler:
 					self.code.append('mov ebx,[esp+' + str(stack_position) + ']')
 					for i in range(pointer_dereference-1):
 						self.code.append('mov ebx,[ebx]')
-					self.code.append('mov [ebx],eax')
+					print('assign_to_identifier', identifier)
+					if identifier.variable_type.size == 1:
+						self.code.append('mov [ebx],al')
+					elif identifier.variable_type.size == 2:
+						self.code.append('mov [ebx],ax')
+					elif identifier.variable_type.size == 4:
+						self.code.append('mov [ebx],eax')
+					else:
+						self.fail('variable type size {identifier.variable_type.size} not implemented')
 				else:
 					self.code.append('mov [esp+' + str(stack_position) + '],eax')
 
