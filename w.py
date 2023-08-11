@@ -70,18 +70,32 @@ class Compiler:
 		self.symbol_table.declare(Type('uint64', 8))
 
 	def define_linux_syscall(self):
+		self.symbol_table.declare(Function('syscall1', 'int', 0))
 		self.symbol_table.declare(Function('syscall4', 'int', 0))
+		self.symbol_table.declare(Function('syscall5', 'int', 0))
 
 	def linux_asm_header(self):
 		self.code.extend([
 			'format ELF executable 3',
 			'entry _main',
 			'',
+			'syscall1:',
+			'mov eax,[esp+4]',
+			'int 0x80',
+			'ret',
 			'syscall4:',
 			'mov eax,[esp+16]',
 			'mov ebx,[esp+12]',
 			'mov ecx,[esp+8]',
 			'mov edx,[esp+4]',
+			'int 0x80',
+			'ret',
+			'syscall5:',
+			'mov eax,[esp+20]',
+			'mov ebx,[esp+16]',
+			'mov ecx,[esp+12]',
+			'mov edx,[esp+8]',
+			'mov esi,[esp+4]',
 			'int 0x80',
 			'ret',
 			'',
