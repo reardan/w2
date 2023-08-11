@@ -686,7 +686,7 @@ class Compiler:
 
 	def output_asm(self):
 		dir = self.root_filename.split('/')
-		dir.insert(1, 'bin')
+		dir.insert(-1, 'bin')
 		dir[-1] = dir[-1].split('.')[0] + '.asm'
 		output_filename = '/'.join(dir)
 		f = open(output_filename, 'w', encoding='utf8')
