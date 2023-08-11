@@ -136,6 +136,12 @@ array_definition: FORCE
 	chmod +x samples/bin/array_definition
 	samples/bin/array_definition
 
+array_definition2: FORCE
+	python w.py samples/array_definition2.w
+	fasm samples/bin/array_definition2.asm
+	chmod +x samples/bin/array_definition2
+	samples/bin/array_definition2
+
 array: FORCE
 	python w.py samples/array.w
 	fasm samples/bin/array.asm

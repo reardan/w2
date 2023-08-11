@@ -269,12 +269,12 @@ class Compiler:
 		self.stack_position += self.word_size
 		if self.tokenizer.accept(','):
 			self.expression()
-			self.code.append('mov ebx,[esp+'+str(self.stack_position+iterator_position-self.word_size*2)+']')
-			self.code.append('mov [esp+'+str(self.stack_position+iterator_position-self.word_size)+'],ebx')
-			self.code.append('mov [esp+'+str(self.stack_position+iterator_position-self.word_size*2)+'],eax')
+			self.code.append('mov ebx,[esp+'+str(self.stack_position-iterator_position-self.word_size*2)+']')
+			self.code.append('mov [esp+'+str(self.stack_position-iterator_position-self.word_size)+'],ebx')
+			self.code.append('mov [esp+'+str(self.stack_position-iterator_position-self.word_size*2)+'],eax')
 		if self.tokenizer.accept(','):
 			self.expression()
-			self.code.append('mov [esp+'+str(self.stack_position+iterator_position-self.word_size*3)+'],eax')
+			self.code.append('mov [esp+'+str(self.stack_position-iterator_position-self.word_size*3)+'],eax')
 		if not self.tokenizer.accept(')'):
 			self.fail('for loop parsing failed: expected ")" after "range(..."')
 		self.label_counters['for_start'] += 1
@@ -282,13 +282,13 @@ class Compiler:
 		self.label_counters['for_end'] += 1
 		for_end_label = 'for_end_' + str(self.label_counters['for_end'])
 		self.code.append(for_start_label + ':')
-		self.code.append('mov eax,[esp+'+str(self.stack_position+iterator_position-self.word_size)+']')
-		self.code.append('mov ebx,[esp+'+str(self.stack_position+iterator_position-self.word_size*2)+']')
+		self.code.append('mov eax,[esp+'+str(self.stack_position-iterator_position-self.word_size)+']')
+		self.code.append('mov ebx,[esp+'+str(self.stack_position-iterator_position-self.word_size*2)+']')
 		self.code.append('cmp eax,ebx')
 		self.code.append('je ' + for_end_label)
 		self.statement()
-		self.code.append('mov eax,[esp+'+str(self.stack_position+iterator_position-self.word_size*3)+']')
-		self.code.append('add [esp+'+str(self.stack_position+iterator_position-self.word_size)+'],eax')
+		self.code.append('mov eax,[esp+'+str(self.stack_position-iterator_position-self.word_size*3)+']')
+		self.code.append('add [esp+'+str(self.stack_position-iterator_position-self.word_size)+'],eax')
 		self.code.append('jmp '+for_start_label)
 		self.code.append(for_end_label + ':')
 		self.fix_stack(iterator_position)
@@ -504,7 +504,8 @@ class Compiler:
 			# TODO: make sure identifier is indexable
 			self.binary1()
 			self.expression()
-			self.code.append('shl eax,' + str(int(log2(identifier.variable_type.size))))
+			if identifier.variable_type.size > 1:
+				self.code.append('shl eax,' + str(int(log2(identifier.variable_type.size))))
 			self.binary2_pop()
 			self.code.append('add eax,ebx')
 			self.pointer_dereference = 1
@@ -514,7 +515,7 @@ class Compiler:
 
 	def identifier_stack_position(self, identifier):
 		if identifier.symbol_type == 'Variable':
-			# print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
+			print(f'identifier: {identifier.name} identifier.stack_position: {identifier.stack_position} self.stack_position: {self.stack_position}')
 			if identifier.sub_type == 'Local':
 				stack_position = self.stack_position - identifier.stack_position
 			# For arguments we need to account for the return address
