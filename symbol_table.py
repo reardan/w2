@@ -26,11 +26,12 @@ class Function(Symbol):
 
 
 class Variable(Symbol):
-	def __init__(self, name, variable_type, sub_type, pointer_level=0):
+	def __init__(self, name, variable_type, sub_type, pointer_level=0, array_count=0):
 		super().__init__(name, 'Variable')
 		self.variable_type = variable_type
 		self.sub_type = sub_type
 		self.pointer_level = pointer_level
+		self.array_count = array_count
 
 	def __str__(self):
 		return f'Variable("{self.name}" [{self.variable_type.name}{"*" * self.pointer_level}] stack:{self.stack_position})'  

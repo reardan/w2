@@ -124,6 +124,18 @@ pointer: FORCE
 	chmod +x samples/bin/pointer
 	samples/bin/pointer
 
+pointer2: FORCE
+	python w.py samples/pointer2.w
+	fasm samples/bin/pointer2.asm
+	chmod +x samples/bin/pointer2
+	samples/bin/pointer2
+
+array_definition: FORCE
+	python w.py samples/array_definition.w
+	fasm samples/bin/array_definition.asm
+	chmod +x samples/bin/array_definition
+	samples/bin/array_definition
+
 array: FORCE
 	python w.py samples/array.w
 	fasm samples/bin/array.asm

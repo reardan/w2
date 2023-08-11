@@ -191,6 +191,7 @@ class Compiler:
 			pass
 		elif self.tokenizer.accept('return'):
 			self.expression()
+			self.promote()
 			self.fix_stack()
 			self.code.append('ret')
 			self.expect_end()
@@ -202,10 +203,12 @@ class Compiler:
 		if not self.tokenizer.accept('if'):
 			return False
 		self.expression()
+		self.promote()
 		self.label_counters['else_label'] += 1
 		else_label = 'else_label_' + str(self.label_counters['else_label'])
 		self.label_counters['end_if_label'] += 1
 		end_if_label = 'end_if_label_' + str(self.label_counters['end_if_label'])
+
 		self.code.append('test eax,eax')
 		self.code.append('jz ' + else_label)
 		self.statement()
@@ -307,28 +310,45 @@ class Compiler:
 		while self.tokenizer.accept('*'):
 			pointer_level += 1
 
+		# array declaration
+		array_count = 0
+		if self.tokenizer.accept('['):
+			array_count = self.positive_int_literal()
+			self.tokenizer.get_token()
+			if not self.tokenizer.accept(']'):
+				self.fail('Misisng closing bracket "]" in array variable declaration')
+
 		name = self.tokenizer.token_string()
 		identifier = self.symbol_table.lookup(name)
 		if identifier:
 			# TODO: add more descriptive error message
 			# including where the variable is previously declared
 			self.fail('variable "' + name + '" was previously declared')
-		variable = Variable(name, symbol_type, 'Local', pointer_level=pointer_level)
+		variable = Variable(name, symbol_type, 'Local', pointer_level=pointer_level, array_count=array_count)
 		self.current_variable = variable
 		self.symbol_table.declare(variable)
 		self.tokenizer.get_token()
 
 		# assignment
 		if self.tokenizer.accept('='):
+			assert(symbol_type.size == self.word_size)  # TODO: remove this for a more generic solution
 			self.expression()
 			self.binary1()
 			self.expect_end()
 		else:
-			self.code.append('push 0')
-			self.stack_position += self.word_size
+			# this is a bit of a hack, large stack arrays will have tons of push 0's
+			# a better solution would be to 'sub esp,type.size' then zero the memory using memset
+			size = 0
+			total_size = symbol_type.size * max(array_count, 1)
+			while size < total_size:
+				self.code.append('push 0')
+				self.stack_position += self.word_size
+				size += self.word_size
 		variable.stack_position = self.stack_position
-		print('declaring variable ' + str(variable))
 		return True
+	
+	def stack_allocate(self, size):
+			self.stack_position += size
 
 	def expression(self):
 		self.assignment_expression()
@@ -339,6 +359,7 @@ class Compiler:
 			# TODO: assert current_identifier is a variable
 			identifier = self.current_identifier
 			pointer_dereference = self.pointer_dereference
+			self.pointer_dereference = 0
 			if self.array_assignment:
 				self.binary1()
 			self.expression()
@@ -347,7 +368,7 @@ class Compiler:
 				self.code.append('mov [ebx],eax')
 			else:
 				self.assign_to_identifier(identifier, pointer_dereference)
-			self.pointer_dereference = 0
+
 
 	def equality_expression(self):
 		self.relational_expression()
@@ -382,10 +403,12 @@ class Compiler:
 			self.relational_code('setge')
 
 	def binary1(self):
+		self.promote()
 		self.code.append('push eax')
 		self.stack_position += self.word_size
 
 	def binary2_pop(self):
+		self.promote()
 		self.code.append('pop ebx')
 		self.stack_position -= self.word_size
 
@@ -455,6 +478,11 @@ class Compiler:
 		self.postfix_expression()
 		self.address_of = False
 
+	def promote(self):
+		if self.pointer_dereference:
+			self.code.append('mov eax,[eax]')
+			self.pointer_dereference = 0
+
 	def postfix_expression(self):
 		self.primary_expression()
 		if self.tokenizer.accept('('):
@@ -479,6 +507,7 @@ class Compiler:
 			self.code.append('shl eax,' + str(int(log2(identifier.variable_type.size))))
 			self.binary2_pop()
 			self.code.append('add eax,ebx')
+			self.pointer_dereference = 1
 			self.array_assignment = True
 			if not self.tokenizer.accept(']'):
 				self.fail('Expected closing "]" for index expression')
@@ -513,7 +542,7 @@ class Compiler:
 		elif identifier.symbol_type == 'Variable':
 			if identifier.sub_type == 'Local' or identifier.sub_type == 'Argument':
 				stack_position = self.identifier_stack_position(identifier)
-				if self.address_of:
+				if self.address_of or identifier.array_count > 0:
 					self.code.append('lea eax,[esp+' + str(stack_position) + ']')
 				else:
 					self.code.append('mov eax,[esp+' + str(stack_position) + ']')
@@ -546,24 +575,36 @@ class Compiler:
 
 		self.tokenizer.get_token()
 		return True
+	
+	def int_literal_sub(self):
+		n = 0
+		token = self.tokenizer.token
+		if not token:
+			return False, n
+		first = token[0]
+		if first < '0' or first > '9':
+			return False, n
+
+		for c in token:
+			n = (n << 1) + (n << 3) + int(c)
+		return True, n
+
+	def positive_int_literal(self):
+		valid, n = self.int_literal_sub()
+		if not valid:
+			self.fail('Expected positive int literal inside array definition')
+		return n
 
 	def int_literal(self):
 		negative = False
-		n = 0
 		if self.tokenizer.accept('-'):
 			negative = True
 			# This is potentially problematic because it could
 			# accept '-' without doing anything
 
-		token = self.tokenizer.token
-		if not token:
+		valid, n = self.int_literal_sub()
+		if not valid:
 			return False
-		first = token[0]
-		if first < '0' or first > '9':
-			return False
-
-		for c in token:
-			n = (n << 1) + (n << 3) + int(c)
 
 		if negative:
 			n = 0 - n
