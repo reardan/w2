@@ -252,6 +252,7 @@ class Compiler:
 		while_end_label = self.next_label('while_end')
 		self.code.append(while_start_label+':')
 		self.expression()
+		self.promote()
 		self.code.append('test eax,eax')
 		self.code.append('jz '+ while_end_label)
 		self.statement()
@@ -518,7 +519,16 @@ class Compiler:
 
 	def promote(self):
 		if self.pointer_dereference:
-			self.code.append('mov eax,[eax]')
+			if self.current_identifier.variable_type.size == 4:
+				self.code.append('mov eax,[eax]')
+			if self.current_identifier.variable_type.size == 2:
+				self.code.append('mov ax,[eax]')
+				self.code.append('movzx eax,ax')
+			if self.current_identifier.variable_type.size == 1:
+				self.code.append('mov al,[eax]')
+				self.code.append('movzx eax,al')
+			else:
+				self.fail(f'promote() not implemented pointer dereference for type.size=={self.current_identifier.variable_type.size}')
 			self.pointer_dereference = 0
 
 	def postfix_expression(self):
