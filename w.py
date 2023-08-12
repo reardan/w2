@@ -117,7 +117,6 @@ class Compiler:
 		self.code.append(';' + ''.join(self.tokenizer.last_line))
 		if False:
 			self.code.append(f' stack:{self.stack_position}')
-		self.code.append('\n')
 		self.tokenizer.expect_end()
 
 	def print_tokens(self):
@@ -173,10 +172,17 @@ class Compiler:
 				self.variable_declaration_sub('Argument')
 				variable = self.current_variable
 				variable.stack_position = variable_stack_position
-				variable_stack_position += variable.variable_type.size
+				if variable.pointer_level > 0:
+					variable_stack_position += self.word_size
+				else:
+					variable_stack_position += variable.variable_type.size
+				function.arguments.append(variable)
 				# self.symbol_table.declare(variable)
 				# self.tokenizer.get_token()
 				self.tokenizer.accept(',')
+			# Reverse argument stack indexes
+			for arg in function.arguments:
+				arg.stack_position = variable_stack_position - arg.stack_position
 			
 			self.statement()
 			# ret()  # only put in if last statement is not a return
@@ -557,7 +563,10 @@ class Compiler:
 			# For arguments we need to account for the return address
 			# that is pushed onto the stack in the 'call' instruction
 			if identifier.sub_type == 'Argument':
-				stack_position = self.stack_position + identifier.stack_position + self.word_size
+				print(identifier.name, identifier.sub_type, identifier.stack_position, self.stack_position)
+				stack_position = self.stack_position + identifier.stack_position
+				# this formerly had +word_size, but might actually need to still ahve this
+				# and then adjust the -word_size in function()
 			return stack_position
 
 	def assign_to_identifier(self, identifier, pointer_dereference):
