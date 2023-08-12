@@ -167,13 +167,15 @@ class Compiler:
 			# Process arguments
 			variable_stack_position = 0
 			while not self.tokenizer.accept(')'):
-				arg_type = self.expect_type_name()
-				arg_identifier = self.tokenizer.token_string()
-				variable = Variable(arg_identifier, arg_type, 'Argument')
+				# arg_type = self.expect_type_name()
+				# arg_identifier = self.tokenizer.token_string()
+				# variable = Variable(arg_identifier, arg_type, 'Argument')
+				self.variable_declaration_sub('Argument')
+				variable = self.current_variable
 				variable.stack_position = variable_stack_position
-				variable_stack_position += self.word_size
-				self.symbol_table.declare(variable)
-				self.tokenizer.get_token()
+				variable_stack_position += variable.variable_type.size
+				# self.symbol_table.declare(variable)
+				# self.tokenizer.get_token()
 				self.tokenizer.accept(',')
 			
 			self.statement()
@@ -313,7 +315,7 @@ class Compiler:
 			self.code.append('add esp,' + str(self.stack_position - stack_position))
 			self.stack_position = stack_position
 
-	def variable_declaration(self):
+	def variable_declaration_sub(self, variable_type):
 		symbol_type = self.symbol_table.lookup(self.tokenizer.token_string())
 		if not symbol_type or symbol_type.symbol_type != 'Type':
 			return False
@@ -338,14 +340,21 @@ class Compiler:
 			# TODO: add more descriptive error message
 			# including where the variable is previously declared
 			self.fail('variable "' + name + '" was previously declared')
-		variable = Variable(name, symbol_type, 'Local', pointer_level=pointer_level, array_count=array_count)
+		variable = Variable(name, symbol_type, variable_type, pointer_level=pointer_level, array_count=array_count)
 		self.current_variable = variable
 		self.symbol_table.declare(variable)
 		self.tokenizer.get_token()
+		self.current_variable = variable
+		return True
 
+	def variable_declaration(self):
+		if not self.variable_declaration_sub('Local'):
+			return False
+		
+		variable = self.current_variable
 		# assignment
 		if self.tokenizer.accept('='):
-			assert(symbol_type.size == self.word_size)  # TODO: remove this for a more generic solution
+			assert(variable.variable_type.size == self.word_size)  # TODO: remove this for a more generic solution
 			self.expression()
 			self.binary1()
 			self.expect_end()
@@ -353,7 +362,7 @@ class Compiler:
 			# this is a bit of a hack, large stack arrays will have tons of push 0's
 			# a better solution would be to 'sub esp,type.size' then zero the memory using memset
 			size = 0
-			total_size = symbol_type.size * max(array_count, 1)
+			total_size = variable.variable_type.size * max(variable.array_count, 1)
 			while size < total_size:
 				self.code.append('push 0')
 				self.stack_position += self.word_size
