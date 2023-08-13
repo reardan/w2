@@ -10,6 +10,14 @@ class Type(Symbol):
 		super().__init__(name, 'Type')
 		self.size = size
 		self.signed = signed
+		self.fields = []
+
+
+class Field():
+	def __init__(self, name, field_type, offset) -> None:
+		self.name = name
+		self.field_type = field_type
+		self.offset = offset
 
 
 class Function(Symbol):

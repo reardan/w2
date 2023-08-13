@@ -160,7 +160,13 @@ char_pointer: FORCE
 	chmod +x bin/char_pointer
 	bin/char_pointer
 
-all: simple add sub multiply modulus not var var2 call call2 string hello if for for2 for3 while while2 repeat assignment pointer pointer2 array_definition array_definition2 array char_array 
+struct: FORCE
+	python ../w.py struct.w
+	fasm bin/struct.asm
+	chmod +x bin/struct
+	bin/struct
+
+all: simple add sub multiply modulus not var var2 call call2 string hello if for for2 for3 while while2 repeat assignment pointer pointer2 array_definition array_definition2 array char_array char_pointer struct
 
 clean:
 	rm bin/*

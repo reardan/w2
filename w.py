@@ -147,10 +147,30 @@ class Compiler:
 		self.tokenizer.get_token()
 		self.symbol_table.add_scope('Module')
 		# Handle imports
+		# Handle struct declarations
+		while self.struct_declaration():
+			pass
 		# Handle variable declarations
 		# Handle function declarations
 		while not self.tokenizer.end_of_file:
 			self.function()
+		
+	def struct_declaration(self):
+		if not self.tokenizer.accept('struct'):
+			return False
+		name = self.identifier_name()
+		if not self.tokenizer.accept(':'):
+			self.fail('Expected ":" after struct name')
+		self.expect_end()
+		struct_type = Type(name, 0)
+		self.symbol_table.declare(struct_type)
+		while self.tokenizer.tab_level > 0:
+			import pdb; pdb.set_trace()
+			field_type = self.expect_type_name()
+			field_name = self.identifier_name()
+			offset = struct_type.size
+			field = Field(field_name, field_type, offset)
+			struct_type.size += field_type.size
 
 	def function(self):
 		type_symbol = self.expect_type_name()
@@ -322,6 +342,16 @@ class Compiler:
 			self.code.append('add esp,' + str(self.stack_position - stack_position))
 			self.stack_position = stack_position
 
+	def identifier_name(self):
+		name = self.tokenizer.token_string()
+		identifier = self.symbol_table.lookup(name)
+		if identifier:
+			# TODO: add more descriptive error message
+			# including where the variable is previously declared
+			self.fail('variable "' + name + '" was previously declared')
+		self.tokenizer.get_token()
+		return name
+
 	def variable_declaration_sub(self, variable_type):
 		symbol_type = self.symbol_table.lookup(self.tokenizer.token_string())
 		if not symbol_type or symbol_type.symbol_type != 'Type':
@@ -341,16 +371,10 @@ class Compiler:
 			if not self.tokenizer.accept(']'):
 				self.fail('Misisng closing bracket "]" in array variable declaration')
 
-		name = self.tokenizer.token_string()
-		identifier = self.symbol_table.lookup(name)
-		if identifier:
-			# TODO: add more descriptive error message
-			# including where the variable is previously declared
-			self.fail('variable "' + name + '" was previously declared')
+		name = self.identifier_name()
 		variable = Variable(name, symbol_type, variable_type, pointer_level=pointer_level, array_count=array_count)
 		self.current_variable = variable
 		self.symbol_table.declare(variable)
-		self.tokenizer.get_token()
 		self.current_variable = variable
 		return True
 
@@ -521,10 +545,10 @@ class Compiler:
 		if self.pointer_dereference:
 			if self.current_identifier.variable_type.size == 4:
 				self.code.append('mov eax,[eax]')
-			if self.current_identifier.variable_type.size == 2:
+			elif self.current_identifier.variable_type.size == 2:
 				self.code.append('mov ax,[eax]')
 				self.code.append('movzx eax,ax')
-			if self.current_identifier.variable_type.size == 1:
+			elif self.current_identifier.variable_type.size == 1:
 				self.code.append('mov al,[eax]')
 				self.code.append('movzx eax,al')
 			else:
