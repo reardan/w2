@@ -162,14 +162,14 @@ class Compiler:
 		if not self.tokenizer.accept(':'):
 			self.fail('Expected ":" after struct name')
 		self.expect_end()
-		struct_type = Type(name, 0)
+		struct_type = Type(name, 0, 'struct')
 		self.symbol_table.declare(struct_type)
 		while self.tokenizer.tab_level > 0:
-			import pdb; pdb.set_trace()
 			field_type = self.expect_type_name()
 			field_name = self.identifier_name()
 			offset = struct_type.size
 			field = Field(field_name, field_type, offset)
+			struct_type.fields.append(field)
 			struct_type.size += field_type.size
 
 	def function(self):
@@ -543,16 +543,30 @@ class Compiler:
 
 	def promote(self):
 		if self.pointer_dereference:
-			if self.current_identifier.variable_type.size == 4:
-				self.code.append('mov eax,[eax]')
-			elif self.current_identifier.variable_type.size == 2:
-				self.code.append('mov ax,[eax]')
-				self.code.append('movzx eax,ax')
-			elif self.current_identifier.variable_type.size == 1:
-				self.code.append('mov al,[eax]')
-				self.code.append('movzx eax,al')
+			if self.current_field:
+					stack_position = self.identifier_stack_position(self.current_identifier)
+					stack_position += self.current_field.offset
+					if self.current_field.field_type.size == 1:
+						self.code.append('mov al,[esp+' + str(stack_position) + ']')
+						self.code.append('movzx eax,al')
+					elif self.current_field.field_type.size == 2:
+						self.code.append('mov ax,[esp+' + str(stack_position) + ']')
+						self.code.append('movzx eax,ax')
+					elif self.current_field.field_type.size == 4:
+						self.code.append('mov eax,[esp+' + str(stack_position) + ']')
+					else:
+						self.fail('variable type size {identifier.variable_type.size} not implemented')
 			else:
-				self.fail(f'promote() not implemented pointer dereference for type.size=={self.current_identifier.variable_type.size}')
+				if self.current_identifier.variable_type.size == 4:
+					self.code.append('mov eax,[eax]')
+				elif self.current_identifier.variable_type.size == 2:
+					self.code.append('mov ax,[eax]')
+					self.code.append('movzx eax,ax')
+				elif self.current_identifier.variable_type.size == 1:
+					self.code.append('mov al,[eax]')
+					self.code.append('movzx eax,al')
+				else:
+					self.fail(f'promote() not implemented pointer dereference for type.size=={self.current_identifier.variable_type.size}')
 			self.pointer_dereference = 0
 
 	def postfix_expression(self):
@@ -588,6 +602,23 @@ class Compiler:
 			self.array_assignment = True
 			if not self.tokenizer.accept(']'):
 				self.fail('Expected closing "]" for index expression')
+		elif self.tokenizer.accept('.'):
+			identifier = self.current_identifier
+			# TODO: make sure identifier is dottable
+			if not identifier.variable_type.sub_type == 'struct':
+				self.fail(f'{identifier.name} is not a struct, cannot use "."')
+			name = self.identifier_name()
+			field = None
+			for f in identifier.variable_type.fields:
+				if f.name == name:
+					field = f
+					break
+			if not field:
+				self.fail(f'field "{name}" not found in struct {identifier.name}')
+			# self.field_stack_position = self.identifier_stack_position(identifier) + field.offset
+			# self.code.append(f'lea eax,[esp+{field_stack_position}]')
+			self.current_field = field
+			self.pointer_dereference = 1
 
 	def identifier_stack_position(self, identifier):
 		if identifier.symbol_type == 'Variable':
@@ -607,7 +638,17 @@ class Compiler:
 		if identifier.symbol_type == 'Variable':
 			stack_position = self.identifier_stack_position(identifier)
 			if identifier.sub_type == 'Local' or identifier.sub_type == 'Argument':
-				if pointer_dereference > 0:
+				if self.current_field:
+					stack_position += self.current_field.offset
+					if self.current_field.field_type.size == 1:
+						self.code.append('mov [esp+' + str(stack_position) + '],al')
+					elif self.current_field.field_type.size == 2:
+						self.code.append('mov [esp+' + str(stack_position) + '],ax')
+					elif self.current_field.field_type.size == 4:
+						self.code.append('mov [esp+' + str(stack_position) + '],eax')
+					else:
+						self.fail('variable type size {identifier.variable_type.size} not implemented')
+				elif pointer_dereference > 0:
 					self.code.append('mov ebx,[esp+' + str(stack_position) + ']')
 					for i in range(pointer_dereference-1):
 						self.code.append('mov ebx,[ebx]')

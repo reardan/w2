@@ -5,10 +5,11 @@ class Symbol:
 
 
 class Type(Symbol):
-	def __init__(self, name, size, signed=False):
+	def __init__(self, name, size, sub_type='', signed=False):
 		"""size is in bytes."""
 		super().__init__(name, 'Type')
 		self.size = size
+		self.sub_type = sub_type
 		self.signed = signed
 		self.fields = []
 

@@ -3,4 +3,7 @@ struct point:
 	int y
 
 int main():
-	return 0
+	point s
+	s.x = 10
+	s.y = 20
+	return s.y - s.x * 2
