@@ -166,7 +166,19 @@ struct: FORCE
 	chmod +x bin/struct
 	bin/struct
 
-all: simple add sub multiply modulus not var var2 call call2 string hello if for for2 for3 while while2 repeat assignment pointer pointer2 array_definition array_definition2 array char_array char_pointer struct
+struct_pointer: FORCE
+	python ../w.py struct_pointer.w
+	fasm bin/struct_pointer.asm
+	chmod +x bin/struct_pointer
+	bin/struct_pointer
+
+mem: FORCE
+	python ../w.py mem.w
+	fasm bin/mem.asm
+	chmod +x bin/mem
+	bin/mem
+
+all: simple add sub multiply modulus not var var2 call call2 string hello if for for2 for3 while while2 repeat assignment pointer pointer2 array_definition array_definition2 array char_array char_pointer struct struct_pointer mem
 
 clean:
 	rm bin/*
